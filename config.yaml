@@ -1,11 +1,11 @@
 grabber:
-  areas:
+  areas: # 南湖的四个区域
     - "101699191"
     - "101699189"
     - "101699187"
     - "101699179"
 
-  isTomorrow: false
+  isTomorrow: false  # 默认预约今天的，true则预约明天的（18:00之后）
 
   startTime: "10:00"
   endTime:   "12:00"
