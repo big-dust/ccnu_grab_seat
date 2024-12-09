@@ -1,0 +1,15 @@
+grabber:
+  areas:
+    - "101699191"
+    - "101699189"
+    - "101699187"
+    - "101699179"
+
+  isTomorrow: false
+
+  startTime: "10:00"
+  endTime:   "12:00"
+
+  username: "" # 学号
+  password: "" # 密码
+
