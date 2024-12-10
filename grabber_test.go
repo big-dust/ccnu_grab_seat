@@ -74,3 +74,21 @@ func TestGrab(t *testing.T) {
 		// 二次验证失败，继续
 	}
 }
+
+// TestIsInLibrary 当前是否在图书馆
+func TestIsInLibrary(t *testing.T) {
+	initViper()
+	conf := GrabberConfig{}
+	err := viper.UnmarshalKey("grabber", &conf)
+	if err != nil {
+		panic(err)
+	}
+	grabber := NewGrabber(conf.Areas, false, conf.StartTime, conf.EndTime)
+	grabber.startFlushClient(conf.Username, conf.Password, time.Second*10)
+	ot := grabber.isInLibrary(conf.IsInLibraryName)
+	if ot != nil {
+		fmt.Printf("在图书馆的%s，%s - %s\n", ot.Title, ot.Start, ot.End)
+	} else {
+		fmt.Println("不在图书馆")
+	}
+}
