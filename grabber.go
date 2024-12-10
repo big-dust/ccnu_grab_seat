@@ -228,6 +228,43 @@ func (g *Grabber) isInLibrary(name string) *occupant {
 	return nil
 }
 
+func (g *Grabber) seatToName(seat string) []ts {
+	for _, area := range g.areas {
+		dateTime := time.Now()
+		if g.isTomorrow {
+			dateTime = dateTime.Add(time.Hour * 24)
+		}
+		year, month, day := dateTime.Date()
+
+		params := url.Values{}
+		params.Set("byType", "devcls")
+		params.Set("classkind", "8")
+		params.Set("display", "fp")
+		params.Set("md", "d")
+		params.Set("room_id", area)
+		params.Set("purpose", "")
+		params.Set("selectOpenAty", "")
+		params.Set("cld_name", "default")
+		params.Set("date", fmt.Sprintf("%d-%02d-%02d", year, month, day))
+		params.Set("fr_start", g.start)
+		params.Set("fr_end", g.end)
+		params.Set("act", "get_rsv_sta")
+		params.Set("_", "16698463729090")
+		parsedSearchUrl, _ := url.Parse(g.searchUrl)
+		cookies := g.authClient.Jar.Cookies(parsedSearchUrl)
+
+		client, bodyData := resty.New(), &searchResp{}
+		_, _ = client.SetCookies(cookies).R().SetQueryParamsFromValues(params).SetResult(&bodyData).Get(g.searchUrl)
+
+		for _, locationInfo := range bodyData.Data {
+			if locationInfo.Title == seat {
+				return locationInfo.Ts
+			}
+		}
+	}
+	return nil
+}
+
 func (g *Grabber) grab(devId string) {
 	dateTime := time.Now()
 	if g.isTomorrow {

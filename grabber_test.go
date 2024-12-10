@@ -92,3 +92,19 @@ func TestIsInLibrary(t *testing.T) {
 		fmt.Println("不在图书馆")
 	}
 }
+
+// TestSeatToName 座位号转姓名: 查看该座位的预约信息，可以看到当前时间预约人是谁
+func TestSeatToName(t *testing.T) {
+	initViper()
+	conf := GrabberConfig{}
+	err := viper.UnmarshalKey("grabber", &conf)
+	if err != nil {
+		panic(err)
+	}
+	grabber := NewGrabber(conf.Areas, false, conf.StartTime, conf.EndTime)
+	grabber.startFlushClient(conf.Username, conf.Password, time.Second*10)
+	students := grabber.seatToName("N1240")
+	for _, st := range students {
+		fmt.Printf("%s: %s - %s\n", st.Owner, st.Start, st.End)
+	}
+}
