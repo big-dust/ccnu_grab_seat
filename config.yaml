@@ -13,3 +13,4 @@ grabber:
   username: "" # 学号
   password: "" # 密码
 
+  isInLibraryName: "" # 一个人名，用于判断是否在图书馆
