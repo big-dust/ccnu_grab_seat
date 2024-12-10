@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/pflag"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/anaskhan96/soup"
 	"github.com/go-resty/resty/v2"
-	"github.com/spf13/viper"
 )
 
 type Grabber struct {
@@ -33,46 +31,6 @@ type GrabberConfig struct {
 	EndTime    string   `yaml:"endTime"`
 	Username   string   `yaml:"username"`
 	Password   string   `yaml:"password"`
-}
-
-func main() {
-	initViper()
-	conf := GrabberConfig{}
-	err := viper.UnmarshalKey("grabber", &conf)
-	if err != nil {
-		panic(err)
-	}
-	grabber := NewGrabber(conf.Areas, conf.IsTomorrow, conf.StartTime, conf.EndTime)
-	grabber.startFlushClient(conf.Username, conf.Password, time.Second*10)
-	for {
-		// 扫描出空位置
-		devId := grabber.findOneVacantSeat()
-		if devId == "" {
-			time.Sleep(time.Second * 1)
-			continue
-		}
-		// 选上
-		grabber.grab(devId)
-		// 二次成功验证
-		if grabber.grabSuccess() {
-			// 结束
-			fmt.Println("=============抢座成功=============")
-			break
-		}
-		// 二次验证失败，继续
-	}
-}
-
-func initViper() {
-	cfile := pflag.String("config", "config.yaml", "配置文件路径")
-	pflag.Parse()
-
-	viper.SetConfigType("yaml")
-	viper.SetConfigFile(*cfile)
-	err := viper.ReadInConfig()
-	if err != nil {
-		panic(err)
-	}
 }
 
 func (g *Grabber) startFlushClient(username, password string, dur time.Duration) {
