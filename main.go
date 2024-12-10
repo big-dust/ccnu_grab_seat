@@ -46,7 +46,7 @@ func main() {
 	grabber.startFlushClient(conf.Username, conf.Password, time.Second*10)
 	for {
 		// 扫描出空位置
-		devId := grabber.searchVacantSeats()
+		devId := grabber.findOneVacantSeat()
 		if devId == "" {
 			time.Sleep(time.Second * 1)
 			continue
@@ -102,15 +102,23 @@ func NewGrabber(areas []string, isTomorrow bool, start string, end string) *Grab
 	}
 }
 
-type searchResp struct {
-	Data []struct {
-		Title string        `json:"title"`
-		Ts    []interface{} `json:"ts"`
-		DevId string        `json:"devId"`
-	}
+type seat struct {
+	Title string `json:"title"`
+	Ts    []ts   `json:"ts"`
+	DevId string `json:"devId"`
 }
 
-func (g *Grabber) searchVacantSeats() string { // 得到一个空闲座位号
+type ts struct { // 预约信息
+	Start string `json:"start"`
+	End   string `json:"end"`
+	Owner string `json:"owner"`
+}
+
+type searchResp struct {
+	Data []seat
+}
+
+func (g *Grabber) findOneVacantSeat() string { // 得到一个空闲座位号
 	for _, area := range g.areas {
 		dateTime := time.Now()
 		if g.isTomorrow {
@@ -139,13 +147,72 @@ func (g *Grabber) searchVacantSeats() string { // 得到一个空闲座位号
 		_, _ = client.SetCookies(cookies).R().SetQueryParamsFromValues(params).SetResult(&bodyData).Get(g.searchUrl)
 
 		for _, locationInfo := range bodyData.Data {
-			if len(locationInfo.Ts) != 0 {
-				continue
+			isConflict := false
+			for _, t := range locationInfo.Ts {
+				// t.Start, t.End, 的结构都是2024-12-10 08:20这样的
+				// 需要忽略前面的日期部分，只比较时间部分
+				if t.Start < g.start && g.start < t.End || t.Start < g.end && g.end < t.End {
+					// 冲突，该座位不能预约
+					isConflict = true
+					break
+				}
 			}
-			return locationInfo.DevId
+			if !isConflict {
+				// 不冲突
+				return locationInfo.DevId
+			}
 		}
 	}
 	return ""
+}
+
+func (g *Grabber) findVacantSeats() []seat { // 得到所有空闲座位
+	vacantSeats := make([]seat, 0)
+	for _, area := range g.areas {
+		dateTime := time.Now()
+		if g.isTomorrow {
+			dateTime = dateTime.Add(time.Hour * 24)
+		}
+		year, month, day := dateTime.Date()
+
+		params := url.Values{}
+		params.Set("byType", "devcls")
+		params.Set("classkind", "8")
+		params.Set("display", "fp")
+		params.Set("md", "d")
+		params.Set("room_id", area)
+		params.Set("purpose", "")
+		params.Set("selectOpenAty", "")
+		params.Set("cld_name", "default")
+		params.Set("date", fmt.Sprintf("%d-%02d-%02d", year, month, day))
+		params.Set("fr_start", g.start)
+		params.Set("fr_end", g.end)
+		params.Set("act", "get_rsv_sta")
+		params.Set("_", "16698463729090")
+		parsedSearchUrl, _ := url.Parse(g.searchUrl)
+		cookies := g.authClient.Jar.Cookies(parsedSearchUrl)
+
+		client, bodyData := resty.New(), &searchResp{}
+		_, _ = client.SetCookies(cookies).R().SetQueryParamsFromValues(params).SetResult(&bodyData).Get(g.searchUrl)
+
+		for _, locationInfo := range bodyData.Data {
+			isConflict := false
+			for _, t := range locationInfo.Ts {
+				// t.Start, t.End, 的结构都是2024-12-10 08:20这样的
+				// 需要忽略前面的日期部分，只比较时间部分
+				if t.Start < g.start && g.start < t.End || t.Start < g.end && g.end < t.End {
+					// 冲突，该座位不能预约
+					isConflict = true
+					break
+				}
+			}
+			if !isConflict {
+				// 不冲突
+				vacantSeats = append(vacantSeats, locationInfo)
+			}
+		}
+	}
+	return vacantSeats
 }
 
 func (g *Grabber) grab(devId string) {
