@@ -112,7 +112,7 @@ func (g *Grabber) findOneVacantSeat() string { // 得到一个空闲座位号
 				// t.Start, t.End, 的结构都是2024-12-10 08:20这样的
 				// 需要忽略前面的日期部分，只比较时间部分
 				start, end := t.Start[len(t.Start)-5:len(t.Start)], t.End[len(t.End)-5:len(t.End)]
-				if start < g.start && g.start < end || start < g.end && g.end < end {
+				if !(g.start > end || g.end < start) {
 					// 冲突，该座位不能预约
 					isConflict = true
 					break
